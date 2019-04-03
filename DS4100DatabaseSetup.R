@@ -3,6 +3,7 @@ library(tidyverse)
 library(stringr)
 library(RPostgreSQL)
 library(lubridate)
+require(DBI)
 
 # By Jessica Cheng and Luke Novak
 # For DS4100, Spring 2019, Northeastern University
@@ -22,9 +23,12 @@ top_album_tidy <- top_album %>% str_remove_all("\n")
 top_artist <- html_nodes(billboard, ".chart-number-one__artist a , .chart-list-item__artist") %>% html_text()
 top_artist_tidy <- top_artist %>% str_remove_all("\n")
 
+driver <- dbDriver("PostgreSQL")
+
+db <- dbConnect(driver) #| db info goes here )
 
 # scraper function
-get_billboard_top_200 <- function(year, month, day) {
+get_billboard_top_200 <- function(year, month, day, dbconn) {
   
   year <- toString(year)
   
@@ -58,24 +62,23 @@ get_billboard_top_200 <- function(year, month, day) {
   items <- billboardsr %>% html_nodes("#main div")
   
   # album names
-  albums <- items %>% html_nodes(".chart-list-item__title-text") %>% html_text()
-  albums <- albums %>% str_remove_all("\n")
+  title <- items %>% html_nodes(".chart-list-item__title-text") %>% html_text()
+  title <- title %>% str_remove_all("\n")
   
   # artist names
-  artists <- items %>% html_nodes(".chart-list-item__artist") %>% html_text()
-  artists <- artists %>% str_remove_all("\n")
+  artist <- items %>% html_nodes(".chart-list-item__artist") %>% html_text()
+  artist <- artist %>% str_remove_all("\n")
   
   # Return a data frame
   result <- tibble(
-    albums,
-    artists
+    title,
+    artist
   )
-  return(result)
-  
+  dbWriteTable(conn = dbconn, "album_samples", result, append = TRUE, row.names = F)
 }
 
 # Testing for the current date
-current_top <- get_billboard_top_200(2019, 03, 17)
+current_top <- get_billboard_top_200(db, 2019, 03, 17)
 
 # Now let's get all of the billboard Top 200 since the list began
 # The first chart was released in August 17, 1963. We can iterate by 7
@@ -84,17 +87,13 @@ start_date <- as_date("08-17-1963", format="%m-%d-%Y", tz="UTC")
 api_dates <- seq(start_date, today(), by="week")
 api_dates[0] <- api_dates[1]
 aggregate_top_200 <- function() {
-  result <- tibble()
     for(int in 1 : length(api_dates)) {
-      result <- bind_rows(result,
-                          get_billboard_top_200(day = mday(api_dates[int]), 
-                          month = month(api_dates[int]), 
-                          year = year(api_dates[int])))
+      get_billboard_top_200(dbconn = db,
+                            day = mday(api_dates[int]), 
+                            month = month(api_dates[int]), 
+                            year = year(api_dates[int]))
       print(api_dates[int])
     }
-  return(result)
-  ## we sleep to avoid getting rate-limited
-  sleep(2)
 }
-all_top_200 <- aggregate_top_200() %>% unique()
+aggregate_top_200()
 
