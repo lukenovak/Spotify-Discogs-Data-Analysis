@@ -37,7 +37,7 @@ CREATE TABLE songs_albums(
 
 CREATE TABLE album_samples(
   title varchar(255),
-  artist varchar(255)
+  artist varchar(255),
   id SERIAL NOT NULL,
   PRIMARY KEY(id)
 )
