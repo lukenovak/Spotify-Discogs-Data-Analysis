@@ -2,22 +2,22 @@
 CREATE TABLE albums(
   id varchar(22)  NOT NULL,
   title varchar(255),
-  artist integer,
-  upc integer,
+  artist varchar(255),
+  upc char(13),
   year integer,
   genre varchar(255),
   PRIMARY KEY(id)
 );
 
 CREATE TABLE artists(
-  id SERIAL NOT NULL,
+  id varchar(255)  NOT NULL,
   name varchar(255),
   popularity integer,
   PRIMARY KEY(id)
 );
 
 CREATE TABLE releases(
-  upc integer,
+  upc char(13),
   format varchar(64),
   PRIMARY KEY(upc)
 );
@@ -27,6 +27,7 @@ CREATE TABLE songs(
   album_id varchar(22),
   name varchar(255),
   popularity integer,
+  duration BIGINT,
   PRIMARY KEY(id)
 );
 
