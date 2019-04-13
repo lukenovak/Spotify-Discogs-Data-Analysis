@@ -31,7 +31,7 @@ album_search_get_id <- function(dbconn, title, artist) {
           result = tryCatch({
             dbSendStatement(dbconn, query)
           }, error = function(e){
-            print("db error, moving onto next album")
+            print(paste("db error,", e, title, "not added, moving onto next album"))
           })
           return(album_results$id[number])
         }
@@ -53,9 +53,9 @@ get_new_album_info <- function(dbconn, id) {
   artist <- album_info$artists$name
   upc <- album_info$external_ids$upc
   genre <- album_info$genres
-  release_year <- album_info$release_date %>% substr(1, 5) %>% as.numeric()
+  release_year <- album_info$release_date %>% substr(1, 4) %>% as.numeric()
   result <- tibble(upc, release_year)
-  query <- paste0('UPDATE albums SET upc = ', upc, " WHERE id = '", id, "';")
+  query <- paste0('UPDATE albums SET upc = ', upc, ", year = ", release_year, " WHERE id = '", id, "';")
   result = tryCatch({
     dbSendQuery(db, query)
     }, error = function(e){
@@ -63,6 +63,8 @@ get_new_album_info <- function(dbconn, id) {
     })
   return(result)
 }
+
+testinfo <- get_new_album_info(db, test_a_search)
 
 albums_with_id <- dbGetQuery(db, 'SELECT * FROM albums;')
 lapply(albums_with_id$id, FUN = get_new_album_info, dbconn = db)
