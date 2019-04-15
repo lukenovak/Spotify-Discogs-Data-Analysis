@@ -27,6 +27,10 @@ CREATE TABLE songs(
   album_id varchar(22),
   name varchar(255),
   popularity integer,
+  key integer,
+  danceability decimal(10,5),
+  valence decimal(10,5),
+  tempo integer,
   duration BIGINT,
   PRIMARY KEY(id)
 );
