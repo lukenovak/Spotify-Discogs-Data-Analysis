@@ -1,6 +1,6 @@
 ---
-title: "SpotifySongQueryPt2"
-author: "Jessica Cheng"
+title: "Spotify Song Query Part 2"
+author: "Jessica Cheng and Luke Novak"
 date: "April 17, 2019"
 output: html_document
 ---
@@ -8,9 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-# By Jessica Cheng and Luke Novak
-
-# set up connection to db
+# Set up connection to db
 
 ```{r}
 library(dplyr)
@@ -25,8 +23,11 @@ db <- dbConnect(drv) #DB DATA GOES HERE
 
 ```
 
-## Spotify query tests
+# Spotify album tracks queries
 
+We want to obtain specific information such as key, duration, valence, popularity and tempo from each track given an album. Our question involves studying how certain features such as key and tempo changes over time in. We decided to obtain this information from the tracks in the most popular albums.
+
+## Test queries and data
 ```{r}
 # search tracks in album
 search_spotify('Twin Fantasy', 'track')
@@ -57,7 +58,9 @@ get_track_id <- get_track_info$id
 tracks_popularity <- sapply(track_id, function(id)get_track(id)$popularity)
 
 ```
-# function to create album songs table
+# Create album songs table
+
+We decided to store all of the information gathered into a tibble and write it to our song table in our database. Information also stored include track IDs to uniquely identify tracks and the album IDs of the album the track came from. This way, we can use the song data and combine information across multiple tables for further analysis.
 ```{r}
 #function to create tibble containing song info from album id
 get_song_info <- function(dbconn, album_id) {
