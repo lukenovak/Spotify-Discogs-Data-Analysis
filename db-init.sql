@@ -13,13 +13,14 @@ CREATE TABLE artists(
   id varchar(255)  NOT NULL,
   name varchar(255),
   popularity integer,
+  primary_genre varchar(100),
   PRIMARY KEY(id)
 );
 
 CREATE TABLE releases(
-  upc char(13),
+  id varchar(255) NOT NULL, 
   format varchar(64),
-  PRIMARY KEY(upc)
+  PRIMARY KEY(id)
 );
 
 CREATE TABLE songs(
@@ -45,4 +46,4 @@ CREATE TABLE album_samples(
   artist varchar(255),
   id SERIAL NOT NULL,
   PRIMARY KEY(id)
-)
+
