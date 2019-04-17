@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# load libraries and connect to database
+# Load libraries and connect to database
 
 ```{r}
 library(dplyr)
@@ -28,7 +28,8 @@ db <- dbConnect(drv, dbname = "music_analysis",
 
 ```
 
-# Query all song tempo data between 1960 and 2019
+# Song Data
+We joined tables songs and albums on album ID in our query to obtain information across both tables such as tempo and duration from songs table and year from albums table since they are the main features we were interested in studying. We queried all song data between 1960 and 2019 as this was the time period we were studying and ordered the data by year.
 
 ```{r}
 # all tempo data between 1960 and 2019
@@ -38,7 +39,10 @@ df_tempo_all <- dbGetQuery(db, "SELECT tempo, duration, year
                            ORDER BY year")
 ```
 
-#visualize outliers in tempo by year
+# Identify outliers in song data and remove them
+We want to study how tempo has changed over the years. First, we decided to create a boxplot to visualize any tempo outliers from each year. 
+
+## Graph tempo by year and visualize outliers in song data
 ```{r}
 # visualize outliers
 tempo_all_plot <- ggplot(df_tempo_all, 
@@ -50,7 +54,7 @@ tempo_all_plot <- ggplot(df_tempo_all,
   theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position="none")
 tempo_all_plot
 ```
-# remove/replace outliers in dataframe with NAs
+Based on the boxplot produced, we see that there are some tempo outliers. Instead of fully removing these outlier as that would produce uneven column lengths, we decide to reassign each outlier value with NA. A new dataframe was produced which contained NA values of the tempo outliers. Then, the rows containing the NAs or outliers were filtered out so that the dataset would not contain outliers.
 ```{r}
 # function to remove outliers (outside of 1.5*IQR range) and replace them with NAs
 remove_outliers <- function(x, na.rm = TRUE) {
@@ -112,7 +116,9 @@ tempo_df <- tempo_table %>% filter(!is.na(tempo))
 na_tempo_new_count <- tempo_df %>% 
   summarise(na_count = sum(is.na(tempo)))
 ```
-# visualize boxplot of new dataframe with outliers removed
+## Visualize boxplot of new song dataframe with outliers removed
+
+The new dataframe still contains a few outliers but as the size of the data is large enough, it was determined that they should not have a large effect on the mean tempo for each year.
 ```{r}
 # new boxplot with NAs outliers removed
 tempo_df_plot <- ggplot(tempo_df, 
@@ -124,7 +130,13 @@ tempo_df_plot <- ggplot(tempo_df,
   theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position="none")
 tempo_df_plot
 ```
-# create scatterplot of average tempos over year
+# Analysis of tempo
+
+## Analyze relationship between tempo over year
+
+### Graph of average tempos over year
+As our question involves studying how tempo has changed over time, we decided to determine the average tempo for each year. Based on observation alone, the average tempo of songs seems to increase over time from 1960 until 1980. Between 1980 and 1999 the average tempo of the songs decreased. Then, the average tempo seems to generally increase again by 2000. The lowest tempos were around 1960s and around 1980 and recent years, the average tempos were quite high.
+
 ```{r}
 #Average tempos
 tempo_avg <- tempo_df %>% group_by(year) %>% 
@@ -140,7 +152,14 @@ avg_tempo_plot <- ggplot(tempo_avg,
   theme(plot.title = element_text(hjust = 0.5))
 avg_tempo_plot + scale_color_gradient()
 ```
-# analyze correlation and model average tempo over year
+### Analyze correlation and model of tempo and year
+Correlation is a statistical measure that suggests the level of linear dependence between two variables. The correlation between the average tempo and year was 0.65. There is a moderately positive correlation between average tempo and year. In general, as year increased since 1960, so did tempo. However, between 1980 and 1990, there was a decrease in tempo which lowered the positive correlation between average tempo and year. One of the other factors we want to study is genre. Certain genres have a specific range of tempos. The popularity of certain genres per year may explain why the average tempo changed per year.
+
+Now that we have seen the linear relationship pictorially in the scatter plot and by computing the correlation, we decide to build the linear model. We have established the relationship between the predictor and response in the form of a mathematical formula for tempo as a function for duration. To ensure that the regression model is statistically significant, we observe the p-value from summary statistics. We can consider a linear model to be statistically significant only when both these p-Values are less that the pre-determined statistical significance level, which is ideally 0.05. This is visually interpreted by the significance stars at the end of the row. The more the stars beside the variable's p-Value, the more significant the variable. The p-value from this model was 2.03e-08 so year is significant.
+
+When there is a p-value, there is a hull and alternative hypothesis associated with it. In Linear Regression, the Null Hypothesis is that the coefficients associated with the variables is equal to zero. The alternate hypothesis is that the coefficients are not equal to zero. There exists a relationship between the independent variable in question (year in this case) and the dependent variable (tempo). As the p-value is below 0.05, this means that the null hypothesis is rejected and there appears to be a relationship between year and average tempo.
+
+What R-Squared tells us is the proportion of variation in the dependent (response) variable that has been explained by this model. The R-squared is 0.42. About 40% of the variation in the average tempo has been explained by this model.
 ```{r}
 # correlation
 cor(tempo_avg$avg_tempo, tempo_avg$year) # around 0.65
@@ -149,7 +168,11 @@ cor(tempo_avg$avg_tempo, tempo_avg$year) # around 0.65
 tempo_mod <- lm(avg_tempo ~ year, data = tempo_avg)
 summary(tempo_mod)
 ```
-# View scatterplot for relationship between tempo and duration
+## Analyze relationship between tempo and duration
+
+### Scatterplot of duration vs tempo
+It was hypothesized that the duration of songs may also have an effect on tempo. For instance, a longer song may have slower tempo. We decided to create a scatterplot to observe if there is a linear relationship. There did not seem to be a linear relationship. What was interesting was that the range of tempos did seem to decrease over duration based on observation alone. However, further analysis was needed.
+
 ```{r}
 # duration vs tempo
 dur_tempo_plot <- ggplot(df_tempo_all, 
@@ -162,7 +185,12 @@ dur_tempo_plot <- ggplot(df_tempo_all,
   theme(plot.title = element_text(hjust = 0.5))
 dur_tempo_plot + scale_color_gradient()
 ```
-# Check relationship between duration and tempo by linear modelling
+### Analyze correlation and model for duration and tempo
+The correlation between duration and tempo was 0.003. A value closer to 0 suggests a weak relationship between the variables. A low correlation (-0.2 < x < 0.2) probably suggests that much of variation of the response variable, tempo, is unexplained by the predictor, duration, in which case, we should probably look for better explanatory variables.
+
+Just in case though, we decide to model duration vs tempo and create a linear regression model. The null hypothesis is that the coefficients associated with the variables is equal to zero. The alternate hypothesis is that the coefficients are not equal to zero. There exists a relationship between the independent variable in question (duration in this case) and the dependent variable (tempo). As the p-value is above 0.05, this means that the null hypothesis is accepted and there does not appear to be a relationship between duration and average tempo. The linear model is not statistically significant as the p-value of 0.173 is higher than the significance level 0.05. 
+
+Finally, the R-squared value is extremely low at 7.6e-06 meaning almost none of the variation in the average tempo has been explained by this model.
 ```{r}
 # bind all columns together from original data with tempo outliers removed into a df
 all <- cbind(tempo_no_outliers, tempo_years, df_tempo_all$duration)
