@@ -1,0 +1,106 @@
+---
+title: "genre_format_data"
+author: "Luke Novak"
+date: "4/17/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analyzing the genre and format data:
+
+Basic setup:
+```{r setup}
+library(dplyr)
+library(ggplot2)
+library(RPostgreSQL)
+library(stringr)
+require(DBI)
+
+drv <- dbDriver("PostgreSQL")
+db <- dbConnect(drv, user=user, host=host,
+                password=pw, dbname='music_analysis') #DB DATA GOES HERE
+```
+
+To analyze the genre and format data we gathered through discogs (and the
+python script scraper, we first need to grab our data from the database
+and clean it up a little (although the data has already been cleaned)
+
+To do this, we join the formats graph with the albums graph so we can see what
+albums were released in what format
+```{r get data}
+formats <- dbGetQuery(db, "SELECT * FROM releases;")
+all_albums <- dbGetQuery(db, "SELECT * FROM albums;")
+formats_joined <- inner_join(formats, all_albums, by = 'id')
+```
+
+### Format analysis
+To analyze the format of graphs over time (this was one of the main goals of 
+the project) we take the formats of albums and the year in which they were 
+released and group them together, summarizing them to get the count of each
+format per year. We then proceed to remove outliers, and do a simple imputation
+of data for the rest of 2019 to normalize it. Finally, we plot the data.
+```{r format analysis}
+count_format_per_year <- formats_joined %>% select(format, year) %>% 
+  group_by(format, year) %>% summarize(total = n())
+
+## We need to remove some outliers, like CDs prior to their inventin in 1982
+count_format_per_year <- count_format_per_year %>% 
+  filter(format != 'CD' | year > 1981)
+## multiply the current year by 3 to extrapolate out
+count_format_per_year <- count_format_per_year %>% 
+  mutate(total = ifelse(year == 2019, total * 4, total))
+
+ggplot(count_format_per_year, aes(x = year, y=total, color=format)) + geom_line()
+
+```
+As we can see, the format of albums has changed greatly over time. While Vinyl
+is the only true contender for the beginning of the graph, we see the rapid
+rise in CDs as time goes on, and the eventual downfall of CDs as well as the
+vinyl revival in the mid 2000s. Finally we see the rise of digitial in the
+2010s as well.
+
+It is worth noting that Discogs is a biased site, and is thus heavily skewed
+towards physical releases (vinyl especially), and so we must consider that when 
+tagging the primary release of an album, users will try to refrain from using
+the file tag unless no physical release is available. Thus, the file data is
+much lower than expected
+
+### Genre analyisis
+To analyze genres, we tidy the data in a similar manner to the format tidying,
+dropping all other columns, summarizing after a grouping with year, and
+imputing for the rest of 2019. Since rock was the dominant genre, I also take
+a look at non-rock genres, and then remove the "small genres" at the bottom
+of the graph to make it easier to read. This can be treated like outlier
+removal
+```{r genres}
+genres <- all_albums %>% filter(genre != 'None')
+count_genre_per_year <- genres %>% select(genre, year) %>% 
+  group_by(genre, year) %>% summarize(total = n())
+
+count_genre_per_year <- count_genre_per_year %>% 
+  mutate(total = ifelse(year == 2019, total * 4, total)) %>% filter(year > 1955)
+
+
+ggplot(count_genre_per_year, aes(x = year, y=total, color=genre)) + geom_line()
+
+count_genre_no_rock <- count_genre_per_year %>% filter(genre != 'Rock' & year > 1960)
+
+ggplot(count_genre_no_rock, aes(x = year, y=total, color=genre)) + geom_line()
+
+count_genre_just_big_ones <- count_genre_no_rock %>% 
+  filter (genre != 'Non-Music' & genre != 'Children\'s' & genre != 'Classical' &
+          genre != 'Stage & Screen' & genre != 'Reggae' & genre != 'Blues' & year != 2019)
+
+ggplot(count_genre_just_big_ones, aes(x = year, y=total, color=genre)) + geom_line()
+```
+
+The genre graph was by far one of the more interesting that we had, as it shows
+a vast number of cultural trends. There are too many to name here, but a few
+examples to observe is the rise in hip-hop since the 80s (and ensuing fall of
+rock in the 2010s that industry experts have been parroting for years), the
+two Electronic booms, one in the 80s (sythwave), and a massive boom/bust in
+the 2010s (the EDM Boom). Also observe the rise and fall and rise again of
+Funk/Soul in the 70s, then returning in the 2010s.
