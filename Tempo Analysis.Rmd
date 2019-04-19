@@ -2,7 +2,7 @@
 title: "Tempo Analysis"
 author: "Jessica Cheng"
 date: "April 17, 2019"
-output: html_document
+output: pdf_document
 ---
 
 ```{r}

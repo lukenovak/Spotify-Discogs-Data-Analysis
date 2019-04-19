@@ -1,6 +1,7 @@
 library(shiny)
 library(shinythemes)
 library(dplyr)
+library(ggplot2)
 library(RPostgreSQL)
 
 
@@ -8,9 +9,12 @@ frontEnd <- fluidPage(theme = shinytheme("slate"),
                 titlePanel("Spotify and Discogs Analysis"),
                 sidebarLayout(
                   sidebarPanel(
-                    selectInput(inputId = "type", label = strong("Audio Feature"), choices = c("Tempo", "Key", "Genre"), selected = "Key"),
-                    numericInput(inputId = "start", label = "Start Year", value = 1960, min = 1960, max = 2019),
-                    numericInput(inputId = "end", label = "End Year", value = 2019, min = 1960, max = 2019)
+                    selectInput(inputId = "type", label = strong("Audio Feature"),
+                                choices = c("Tempo", "Key", "Genre", "Release Format"), selected = "Key"),
+                    numericInput(inputId = "start", label = "Start Year", 
+                                 value = 1960, min = 1960, max = 2019),
+                    numericInput(inputId = "end", label = "End Year", 
+                                 value = 2019, min = 1960, max = 2019)
                   ),
                   
                   mainPanel(
@@ -22,7 +26,10 @@ server <- function(input, output) {
   
   driver <- dbDriver("PostgreSQL")
   # username and pw stored locally 
-  db <- dbConnect(driver, user = user, password = pw, host = "fernando.nluken.com", dbname = "music_analysis")
+  db <- dbConnect(driver, user = Sys.getenv('DB_USER'),
+                  password = Sys.getenv("DB_PW"), 
+                  host = Sys.getenv("DB_HOST"), 
+                  dbname = "music_analysis")
   
   # Create scatterplot object the plotOutput function is expecting
   output$plot <- renderPlot({
@@ -83,6 +90,30 @@ server <- function(input, output) {
       
       
       return(ggplot(count_genre_per_year, aes(x = year, y=total, color=genre)) + geom_line())
+      
+    }
+    
+    if (graphType == "Release Format") {
+      formats <- dbGetQuery(db, "SELECT * FROM releases;")
+      all_albums <- dbGetQuery(db, "SELECT * FROM albums;")
+      formats_joined <- inner_join(formats, all_albums, by = 'id')
+      count_format_per_year <- formats_joined %>% select(format, year) %>% 
+        group_by(format, year) %>% summarize(total = n())
+      
+      ## We need to remove some outliers, like CDs prior to their inventin in 1982
+      count_format_per_year <- count_format_per_year %>% 
+        filter(format != 'CD' | year > 1981)
+      ## multiply the current year by 3 to extrapolate out
+      count_format_per_year <- count_format_per_year %>% 
+        mutate(total = ifelse(year == 2019, total * 4, total))
+      
+      ## filter by selected year
+      count_format_per_year <- count_format_per_year %>%
+        filter(year > startYear & year < endYear)
+      
+      return(ggplot(count_format_per_year, 
+                    aes(x = year, y=total, color=format)) + 
+               geom_line())
       
     }
   })
