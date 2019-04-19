@@ -6,21 +6,47 @@ library(RPostgreSQL)
 
 
 frontEnd <- fluidPage(theme = shinytheme("slate"),
-                titlePanel("Spotify and Discogs Analysis"),
-                sidebarLayout(
-                  sidebarPanel(
-                    selectInput(inputId = "type", label = strong("Audio Feature"),
-                                choices = c("Tempo", "Key", "Genre", "Release Format"), selected = "Key"),
-                    numericInput(inputId = "start", label = "Start Year", 
-                                 value = 1960, min = 1960, max = 2019),
-                    numericInput(inputId = "end", label = "End Year", 
-                                 value = 2019, min = 1960, max = 2019)
-                  ),
-                  
-                  mainPanel(
-                    plotOutput(outputId = "plot", height = "300px")
-                  )
-))
+            tags$head(
+              tags$style(HTML("
+
+                              h1 {
+                              text-align:center;
+                              }
+                              
+                              h3 {
+                              text-align:center
+                              }
+
+                              h5 {
+                              text-align:center
+                              }
+                              "))
+              ),     
+                    
+              h1("Analysis of The Billboard 200"),
+              h3("by Luke Novak, Jessica Cheng, and Matt Lowe"),
+              h5("Northeastern University"),
+              sidebarLayout(
+                sidebarPanel(
+                  selectInput(inputId = "type", label = strong("Audio Feature"),
+                              choices = c("Tempo", "Key", "Genre", "Release Format"), selected = "Key"),
+                  numericInput(inputId = "start", label = "Start Year", 
+                               value = 1960, min = 1960, max = 2019),
+                  numericInput(inputId = "end", label = "End Year", 
+                               value = 2019, min = 1960, max = 2019)
+                ),
+                
+                mainPanel(
+                  plotOutput(outputId = "plot", height = "300px")
+                )),
+               
+              p(paste0("About this data: This was a survey of",
+                       " all albums in the billboard 200 since its",
+                       " inception in the 1960's. Data about songs was",
+                       " gathered from Spotify with release format and",
+                       " genre data gathered from Discogs"))
+  
+)
 
 server <- function(input, output) {
   
