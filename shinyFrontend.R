@@ -20,7 +20,13 @@ frontEnd <- fluidPage(theme = shinytheme("slate"),
                               h5 {
                               text-align:center
                               }
-                              "))
+                              
+                              .threecol {
+                                -webkit-column-count: 3;
+                                -moz-column-count: 3;
+                                column-count: 3;
+                              }"
+                              ))
               ),     
                     
               h1("Analysis of The Billboard 200"),
@@ -37,14 +43,18 @@ frontEnd <- fluidPage(theme = shinytheme("slate"),
                 ),
                 
                 mainPanel(
-                  plotOutput(outputId = "plot", height = "300px")
+                  plotOutput(outputId = "plot", height = "300px"),
+                  conditionalPanel(condition = "input.type == 'Genre'",
+                                   uiOutput("genre_panel")
+                  )
                 )),
-               
+            
               p(paste0("About this data: This was a survey of",
                        " all albums in the billboard 200 since its",
                        " inception in the 1960's. Data about songs was",
                        " gathered from Spotify with release format and",
                        " genre data gathered from Discogs"))
+            
   
 )
 
@@ -56,6 +66,29 @@ server <- function(input, output) {
                   password = Sys.getenv("DB_PW"), 
                   host = Sys.getenv("DB_HOST"), 
                   dbname = "music_analysis")
+  
+  observeEvent(input$type, {
+    genre_vector <- 
+      na.exclude(dbGetQuery(db, "SELECT DISTINCT(genre) FROM albums")$genre) %>%
+      Filter(f = function(x) {
+        return(x != "None")
+      })
+    
+    if (input$type == "Genre") {
+      output$genre_panel <-
+        renderUI({
+          div(class = "threecol",
+            checkboxGroupInput(
+              inputId = "genres_incl",
+              label = strong("Include Genres:"),
+              choices = genre_vector,
+              selected = genre_vector
+            )
+          )
+        })
+      return()
+    }
+  })
   
   # Create scatterplot object the plotOutput function is expecting
   output$plot <- renderPlot({
@@ -105,8 +138,11 @@ server <- function(input, output) {
     }
     
     if (graphType == "Genre") {
+      
       all_albums <- dbGetQuery(db, "SELECT * FROM albums;")
-      genres <- all_albums %>% filter(genre != 'None')
+      genres_selected <- input$genres_incl
+      genres <- all_albums %>% filter(genre != 'None') %>%
+        filter(genre %in% genres_selected)
       count_genre_per_year <- genres %>% select(genre, year) %>% 
         group_by(genre, year) %>% summarize(total = n())
       
@@ -114,8 +150,11 @@ server <- function(input, output) {
         mutate(total = ifelse(year == 2019, total * 4, total)) %>% 
         filter(year > startYear & year < endYear)
       
-      
-      return(ggplot(count_genre_per_year, aes(x = year, y=total, color=genre)) + geom_line())
+      return(ggplot(count_genre_per_year, 
+                    aes(x = year, y=total, color=genre)) + geom_line() +
+               labs(x = "Year", y = "Total number of albums") +
+               ggtitle("Genre Changes over time in the billboard 200") +
+               theme(plot.title = element_text(hjust = 0.5)))
       
     }
     

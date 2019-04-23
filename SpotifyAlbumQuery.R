@@ -7,14 +7,17 @@ library(lubridate)
 library(stringr)
 require(DBI)
 drv <- dbDriver("PostgreSQL")
-db <- dbConnect(drv) #DB DATA GOES HERE
+db <- dbConnect(drv, user = Sys.getenv("DB_USER"), password = Sys.getenv("DB_PW"),
+                host = Sys.getenv("DB_HOST"), dbname = "music_analysis") #DB DATA GOES HERE
 
 get_album_query <- sql('SELECT * FROM album_samples_unique;')
 already_retreived_query <- sql('SELECT * FROM albums;')
 albums <- dbGetQuery(db, get_album_query)
 retreived_already <- dbGetQuery(db, already_retreived_query)
 
-remaining_albums <- anti_join(albums, retreived_already, by=c("title" = "title", "artist" = "artist"))
+remaining_albums <- 
+  anti_join(albums, retreived_already, by=c("title" = "title", "artist" = "artist")) %>%
+  arrange(desc(title))
 
 
 test_album <- search_spotify('Twin Fantasy', 'album')
