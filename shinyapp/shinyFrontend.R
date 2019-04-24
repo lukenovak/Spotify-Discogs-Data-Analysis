@@ -7,26 +7,7 @@ library(RPostgreSQL)
 
 frontEnd <- fluidPage(theme = shinytheme("slate"),
             tags$head(
-              tags$style(HTML("
-
-                              h1 {
-                              text-align:center;
-                              }
-                              
-                              h3 {
-                              text-align:center
-                              }
-
-                              h5 {
-                              text-align:center
-                              }
-                              
-                              .threecol {
-                                -webkit-column-count: 3;
-                                -moz-column-count: 3;
-                                column-count: 3;
-                              }"
-                              ))
+              tags$link(rel = "stylesheet", type = "text/css", href="style.css")
               ),     
                     
               h1("Analysis of The Billboard 200"),
@@ -46,16 +27,17 @@ frontEnd <- fluidPage(theme = shinytheme("slate"),
                   plotOutput(outputId = "plot", height = "300px"),
                   conditionalPanel(condition = "input.type == 'Genre'",
                                    uiOutput("genre_panel")
+                  ),
+                  div(class = "centerdiv",
+                      div(class = "infodiv",
+                          p(paste0("About this data: This was a survey of",
+                                   " all albums in the billboard 200 since its",
+                                   " inception in the 1960's. Data about songs was",
+                                   " gathered from Spotify with release format and",
+                                   " genre data gathered from Discogs"))
+                      )
                   )
-                )),
-            
-              p(paste0("About this data: This was a survey of",
-                       " all albums in the billboard 200 since its",
-                       " inception in the 1960's. Data about songs was",
-                       " gathered from Spotify with release format and",
-                       " genre data gathered from Discogs"))
-            
-  
+                ))
 )
 
 server <- function(input, output) {

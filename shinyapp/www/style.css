@@ -1,0 +1,32 @@
+body {
+  font: "Avenir", "Avenir Next", "Helvetica", sans-serif;
+}
+
+h1 {
+  text-align:center;
+}
+
+h3 {
+  text-align:center;
+}
+
+h5 {
+  text-align:center;
+}
+
+.threecol {
+  -webkit-column-count: 3;
+  -moz-column-count: 3;
+  column-count:3;
+}
+
+.infodiv {
+  padding-top: 1em;
+  display: inline-block;
+  text-align: left;
+}
+
+.centerdiv {
+  width: 100%;
+  text-align: center;
+}
